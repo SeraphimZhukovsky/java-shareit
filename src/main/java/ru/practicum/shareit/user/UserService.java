@@ -26,26 +26,26 @@ public class UserService {
     User existingUser = userRepository.findById(userId)
             .orElseThrow(() -> new NotFoundException("User not found"));
 
-    if (userDto.getEmail() != null && !userDto.getEmail().isBlank()) {
-      if (!isValidEmail(userDto.getEmail())) {
+    if (userDto.getName() != null) {
+      if (userDto.getName().isBlank()) {
+        throw new ValidationException("Name cannot be blank");
+      }
+      existingUser.setName(userDto.getName());
+    }
+
+    if (userDto.getEmail() != null) {
+      if (userDto.getEmail().isBlank()) {
+        throw new ValidationException("Email cannot be blank");
+      }
+      if (!userDto.getEmail().contains("@")) {
         throw new ValidationException("Email should be valid");
       }
-
       if (userRepository.findByEmail(userDto.getEmail())
               .filter(user -> !user.getId().equals(userId))
               .isPresent()) {
         throw new ConflictException("Email already exists");
       }
       existingUser.setEmail(userDto.getEmail());
-    } else if (userDto.getEmail() != null && userDto.getEmail().isBlank()) {
-      throw new ValidationException("Email cannot be blank");
-    }
-
-    if (userDto.getName() != null) {
-      if (userDto.getName().isBlank()) {
-        throw new ValidationException("Name cannot be blank");
-      }
-      existingUser.setName(userDto.getName());
     }
 
     User updatedUser = userRepository.update(existingUser);

@@ -22,7 +22,7 @@ public class UserController {
 
   @PatchMapping("/{userId}")
   public UserDto updateUser(@PathVariable Long userId,
-                            @RequestBody UserDto userDto) {
+                            @RequestBody UserDto userDto) { // УБРАТЬ @Valid
     return userService.updateUser(userId, userDto);
   }
 

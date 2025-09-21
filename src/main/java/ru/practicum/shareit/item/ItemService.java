@@ -2,10 +2,7 @@ package ru.practicum.shareit.item;
 
 import jakarta.validation.ValidationException;
 import org.springframework.stereotype.Service;
-import ru.practicum.shareit.booking.Booking;
 import ru.practicum.shareit.booking.BookingRepository;
-import ru.practicum.shareit.booking.BookingStatus;
-import ru.practicum.shareit.booking.dto.BookingShortDto;
 import ru.practicum.shareit.error.AccessDeniedException;
 import ru.practicum.shareit.error.NotFoundException;
 import ru.practicum.shareit.item.dto.ItemDto;
@@ -13,7 +10,6 @@ import ru.practicum.shareit.item.model.Item;
 import ru.practicum.shareit.request.ItemRequestRepository;
 import ru.practicum.shareit.user.UserService;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -75,50 +71,7 @@ public class ItemService {
     Item item = itemRepository.findById(itemId)
             .orElseThrow(() -> new NotFoundException("Item not found"));
 
-    ItemDto itemDto = ItemMapper.toItemDto(item);
-
-    if (item.getOwnerId().equals(userId)) {
-      addBookingInfo(itemDto);
-    }
-
-    return itemDto;
-  }
-
-  private void addBookingInfo(ItemDto itemDto) {
-    List<Booking> itemBookings = bookingRepository.findByItemId(itemDto.getId());
-
-    // Последнее завершенное бронирование
-    Booking lastBooking = itemBookings.stream()
-            .filter(booking -> booking.getEnd().isBefore(LocalDateTime.now()) &&
-                    booking.getStatus() == BookingStatus.APPROVED)
-            .max((b1, b2) -> b2.getEnd().compareTo(b1.getEnd()))
-            .orElse(null);
-
-    // Следующее бронирование
-    Booking nextBooking = itemBookings.stream()
-            .filter(booking -> booking.getStart().isAfter(LocalDateTime.now()) &&
-                    booking.getStatus() == BookingStatus.APPROVED)
-            .min((b1, b2) -> b1.getStart().compareTo(b2.getStart()))
-            .orElse(null);
-
-    // Устанавливаем найденные бронирования в DTO
-    if (lastBooking != null) {
-      itemDto.setLastBooking(new BookingShortDto(
-              lastBooking.getId(),
-              lastBooking.getBookerId(),
-              lastBooking.getStart(),
-              lastBooking.getEnd()
-      ));
-    }
-
-    if (nextBooking != null) {
-      itemDto.setNextBooking(new BookingShortDto(
-              nextBooking.getId(),
-              nextBooking.getBookerId(),
-              nextBooking.getStart(),
-              nextBooking.getEnd()
-      ));
-    }
+    return ItemMapper.toItemDto(item);
   }
 
   public List<ItemDto> getItemsByOwner(Long ownerId) {
