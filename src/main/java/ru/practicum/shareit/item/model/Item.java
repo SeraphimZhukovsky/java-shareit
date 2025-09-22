@@ -13,9 +13,7 @@ public class Item {
   private String description;
   private Boolean available;
   private Long ownerId;
-  private Long requestId;
-  private Long lastBookingId;
-  private Long nextBookingId;
+
 
   public Item(Long id, String name, String description, Boolean available,
               Long ownerId, Long requestId) {
@@ -24,8 +22,5 @@ public class Item {
     this.description = description;
     this.available = available;
     this.ownerId = ownerId;
-    this.requestId = requestId;
-    this.lastBookingId = null;
-    this.nextBookingId = null;
   }
 }

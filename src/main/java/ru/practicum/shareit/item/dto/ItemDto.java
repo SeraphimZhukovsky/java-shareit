@@ -20,6 +20,4 @@ public class ItemDto {
 
   @NotNull(message = "Available status cannot be null")
   private Boolean available;
-
-  private Long requestId;
 }

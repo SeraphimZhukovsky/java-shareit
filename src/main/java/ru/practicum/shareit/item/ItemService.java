@@ -2,12 +2,10 @@ package ru.practicum.shareit.item;
 
 import jakarta.validation.ValidationException;
 import org.springframework.stereotype.Service;
-import ru.practicum.shareit.booking.BookingRepository;
 import ru.practicum.shareit.error.AccessDeniedException;
 import ru.practicum.shareit.error.NotFoundException;
 import ru.practicum.shareit.item.dto.ItemDto;
 import ru.practicum.shareit.item.model.Item;
-import ru.practicum.shareit.request.ItemRequestRepository;
 import ru.practicum.shareit.user.UserService;
 
 import java.util.List;
@@ -16,8 +14,6 @@ import java.util.stream.Collectors;
 @Service
 public class ItemService {
   private final ItemRepository itemRepository = new ItemRepository();
-  private final BookingRepository bookingRepository = new BookingRepository();
-  private final ItemRequestRepository requestRepository = new ItemRequestRepository();
   private final UserService userService;
 
   public ItemService(UserService userService) {
@@ -26,11 +22,6 @@ public class ItemService {
 
   public ItemDto createItem(ItemDto itemDto, Long ownerId) {
     userService.getUserById(ownerId);
-
-    if (itemDto.getRequestId() != null) {
-      requestRepository.findById(itemDto.getRequestId())
-              .orElseThrow(() -> new NotFoundException("Request not found"));
-    }
 
     Item item = ItemMapper.toItem(itemDto, ownerId);
     Item savedItem = itemRepository.save(item);
@@ -82,13 +73,6 @@ public class ItemService {
 
   public List<ItemDto> searchItems(String text) {
     return itemRepository.search(text).stream()
-            .map(ItemMapper::toItemDto)
-            .collect(Collectors.toList());
-  }
-
-  public List<ItemDto> getItemsByRequestId(Long requestId) {
-    return itemRepository.findAll().stream()
-            .filter(item -> requestId.equals(item.getRequestId()))
             .map(ItemMapper::toItemDto)
             .collect(Collectors.toList());
   }
