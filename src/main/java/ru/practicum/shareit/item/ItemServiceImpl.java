@@ -44,10 +44,10 @@ public class ItemServiceImpl implements ItemService {
       throw new AccessDeniedException("Access denied");
     }
 
-    if (itemDto.getName() != null) {
+    if (itemDto.getName() != null && !itemDto.getName().isBlank()) {
       existingItem.setName(itemDto.getName());
     }
-    if (itemDto.getDescription() != null) {
+    if (itemDto.getDescription() != null && !itemDto.getDescription().isBlank()) {
       existingItem.setDescription(itemDto.getDescription());
     }
     if (itemDto.getAvailable() != null) {
@@ -89,10 +89,7 @@ public class ItemServiceImpl implements ItemService {
     String searchText = text.toLowerCase();
     List<Item> allItems = itemRepository.findAll();
 
-    List<ItemDto> result = allItems.stream()
-            .filter(item -> item.getAvailable() &&
-                    (item.getName().toLowerCase().contains(searchText) ||
-                            item.getDescription().toLowerCase().contains(searchText)))
+    List<ItemDto> result = itemRepository.search(text).stream()
             .map(ItemMapper::toItemDto)
             .collect(Collectors.toList());
 

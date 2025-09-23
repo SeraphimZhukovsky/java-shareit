@@ -15,4 +15,6 @@ public interface ItemRepository {
   Item update(Item item);
 
   List<Item> findByOwnerId(Long ownerId);
+
+  List<Item> search(String text);
 }

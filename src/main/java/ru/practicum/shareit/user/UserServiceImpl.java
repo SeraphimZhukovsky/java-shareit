@@ -34,11 +34,11 @@ public class UserServiceImpl implements UserService {
     log.info("Updating user ID: {}", userId);
     User existingUser = getUserByIdOrThrow(userId);
 
-    if (userDto.getName() != null) {
+    if (userDto.getName() != null && !userDto.getName().isBlank()) {
       existingUser.setName(userDto.getName());
     }
 
-    if (userDto.getEmail() != null) {
+    if (userDto.getEmail() != null && !userDto.getEmail().isBlank()) {
       checkEmailUniqueness(userDto.getEmail(), userId);
 
       if (!isValidEmail(userDto.getEmail())) {
