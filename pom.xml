@@ -67,11 +67,6 @@
 			<scope>compile</scope>
 		</dependency>
 		<dependency>
-			<groupId>org.projectlombok</groupId>
-			<artifactId>lombok</artifactId>
-			<scope>provided</scope>
-		</dependency>
-		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-jpa</artifactId>
 		</dependency>
@@ -231,17 +226,12 @@
 						<groupId>org.apache.maven.plugins</groupId>
 						<artifactId>maven-checkstyle-plugin</artifactId>
 					</plugin>
-
-				</plugins>
-			</build>
-			<reporting>
-				<plugins>
 					<plugin>
 						<groupId>com.github.spotbugs</groupId>
 						<artifactId>spotbugs-maven-plugin</artifactId>
 					</plugin>
 				</plugins>
-			</reporting>
+			</build>
 		</profile>
 		<profile>
 			<id>coverage</id>
@@ -255,5 +245,4 @@
 			</build>
 		</profile>
 	</profiles>
-
 </project>

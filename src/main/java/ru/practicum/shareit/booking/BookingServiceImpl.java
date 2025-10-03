@@ -99,35 +99,32 @@ public class BookingServiceImpl implements BookingService {
 
   @Override
   public List<BookingResponseDto> getUserBookings(Long bookerId, BookingState state, int from, int size) {
-    userRepository.findById(bookerId)
+    User booker = userRepository.findById(bookerId)
             .orElseThrow(() -> new NotFoundException("User with id " + bookerId + " not found"));
-
-    User booker = new User();
-    booker.setId(bookerId);
 
     PageRequest pageRequest = PageRequest.of(from / size, size, Sort.by(Sort.Direction.DESC, "start"));
     List<Booking> bookings;
 
     switch (state) {
       case CURRENT:
-        bookings = bookingRepository.findByBookerIdAndStartBeforeAndEndAfter(
-                bookerId, LocalDateTime.now(), LocalDateTime.now(), pageRequest.getSort());
+        bookings = bookingRepository.findByBookerAndStartBeforeAndEndAfter(
+                booker, LocalDateTime.now(), LocalDateTime.now(), pageRequest.getSort());
         break;
       case PAST:
-        bookings = bookingRepository.findByBookerIdAndEndBefore(
-                bookerId, LocalDateTime.now(), pageRequest.getSort());
+        bookings = bookingRepository.findByBookerAndEndBefore(
+                booker, LocalDateTime.now(), pageRequest.getSort());
         break;
       case FUTURE:
-        bookings = bookingRepository.findByBookerIdAndStartAfter(
-                bookerId, LocalDateTime.now(), pageRequest.getSort());
+        bookings = bookingRepository.findByBookerAndStartAfter(
+                booker, LocalDateTime.now(), pageRequest.getSort());
         break;
       case WAITING:
       case REJECTED:
         BookingStatus status = BookingStatus.valueOf(state.name());
-        bookings = bookingRepository.findByBookerIdAndStatus(bookerId, status, pageRequest.getSort());
+        bookings = bookingRepository.findByBookerAndStatus(booker, status, pageRequest.getSort());
         break;
-      default:
-        bookings = bookingRepository.findByBookerId(bookerId, pageRequest.getSort());
+      default: // ALL
+        bookings = bookingRepository.findByBooker(booker, pageRequest.getSort());
     }
 
     return bookings.stream()
@@ -145,24 +142,24 @@ public class BookingServiceImpl implements BookingService {
 
     switch (state) {
       case CURRENT:
-        bookings = bookingRepository.findByItemOwnerIdAndStartBeforeAndEndAfter(
+        bookings = bookingRepository.findByItem_OwnerIdAndStartBeforeAndEndAfter(
                 ownerId, LocalDateTime.now(), LocalDateTime.now(), pageRequest.getSort());
         break;
       case PAST:
-        bookings = bookingRepository.findByItemOwnerIdAndEndBefore(
+        bookings = bookingRepository.findByItem_OwnerIdAndEndBefore(
                 ownerId, LocalDateTime.now(), pageRequest.getSort());
         break;
       case FUTURE:
-        bookings = bookingRepository.findByItemOwnerIdAndStartAfter(
+        bookings = bookingRepository.findByItem_OwnerIdAndStartAfter(
                 ownerId, LocalDateTime.now(), pageRequest.getSort());
         break;
       case WAITING:
       case REJECTED:
         BookingStatus status = BookingStatus.valueOf(state.name());
-        bookings = bookingRepository.findByItemOwnerIdAndStatus(ownerId, status, pageRequest.getSort());
+        bookings = bookingRepository.findByItem_OwnerIdAndStatus(ownerId, status, pageRequest.getSort());
         break;
-      default:
-        bookings = bookingRepository.findByItemOwnerId(ownerId, pageRequest.getSort());
+      default: // ALL
+        bookings = bookingRepository.findByItem_OwnerId(ownerId, pageRequest.getSort());
     }
 
     return bookings.stream()
