@@ -1,20 +1,22 @@
 package ru.practicum.shareit.item;
 
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import jakarta.validation.Valid;
 import jakarta.validation.ValidationException;
 import org.springframework.web.bind.annotation.*;
+import ru.practicum.shareit.item.dto.CommentDto;
 import ru.practicum.shareit.item.dto.ItemDto;
+import ru.practicum.shareit.item.dto.ItemWithBookingsDto;
 
 import java.util.List;
 
+@Slf4j
 @RestController
 @RequestMapping("/items")
+@RequiredArgsConstructor
 public class ItemController {
   private final ItemService itemService;
-
-  public ItemController(ItemService itemService) {
-    this.itemService = itemService;
-  }
 
   @PostMapping
   public ItemDto createItem(@Valid @RequestBody ItemDto itemDto,
@@ -33,18 +35,25 @@ public class ItemController {
   }
 
   @GetMapping("/{itemId}")
-  public ItemDto getItemById(@PathVariable Long itemId,
-                             @RequestHeader("X-Sharer-User-Id") Long userId) {
+  public ItemWithBookingsDto getItemById(@PathVariable Long itemId,
+                                         @RequestHeader("X-Sharer-User-Id") Long userId) {
     return itemService.getItemById(itemId, userId);
   }
 
   @GetMapping
-  public List<ItemDto> getItemsByOwner(@RequestHeader("X-Sharer-User-Id") Long ownerId) {
+  public List<ItemWithBookingsDto> getItemsByOwner(@RequestHeader("X-Sharer-User-Id") Long ownerId) {
     return itemService.getItemsByOwner(ownerId);
   }
 
   @GetMapping("/search")
   public List<ItemDto> searchItems(@RequestParam String text) {
     return itemService.searchItems(text);
+  }
+
+  @PostMapping("/{itemId}/comment")
+  public CommentDto addComment(@PathVariable Long itemId,
+                               @Valid @RequestBody CommentDto commentDto,
+                               @RequestHeader("X-Sharer-User-Id") Long authorId) {
+    return itemService.addComment(itemId, commentDto, authorId);
   }
 }
