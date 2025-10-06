@@ -36,10 +36,10 @@ public class ItemServiceImpl implements ItemService {
   @Transactional
   public ItemDto createItem(ItemDto itemDto, Long ownerId) {
     log.info("Creating item for owner ID: {}", ownerId);
-    userRepository.findById(ownerId)
+    User owner = userRepository.findById(ownerId)
             .orElseThrow(() -> new NotFoundException("User with id " + ownerId + " not found"));
 
-    Item item = ItemMapper.toItem(itemDto, ownerId);
+    Item item = ItemMapper.toItem(itemDto, owner);
     Item savedItem = itemRepository.save(item);
     log.info("Item created with ID: {}", savedItem.getId());
     return ItemMapper.toItemDto(savedItem);
@@ -53,11 +53,13 @@ public class ItemServiceImpl implements ItemService {
     Item existingItem = itemRepository.findById(itemId)
             .orElseThrow(() -> new NotFoundException("Item with id " + itemId + " not found"));
 
-    if (!existingItem.getOwnerId().equals(ownerId)) {
+    // Проверка, что пользователь - владелец вещи
+    if (!existingItem.getOwner().getId().equals(ownerId)) {
       log.warn("Access denied for user ID: {} to update item ID: {}", ownerId, itemId);
       throw new AccessDeniedException("Access denied");
     }
 
+    // Обновление полей
     if (itemDto.getName() != null && !itemDto.getName().isBlank()) {
       existingItem.setName(itemDto.getName());
     }
@@ -83,7 +85,7 @@ public class ItemServiceImpl implements ItemService {
     ItemWithBookingsDto itemWithBookings = ItemMapper.toItemWithBookingsDto(item);
 
     // Добавляем информацию о бронированиях только для владельца
-    if (item.getOwnerId().equals(userId)) {
+    if (item.getOwner().getId().equals(userId)) {
       addBookingInfo(item, itemWithBookings);
     }
 
@@ -101,22 +103,11 @@ public class ItemServiceImpl implements ItemService {
             .orElseThrow(() -> new NotFoundException("User with id " + ownerId + " not found"));
 
     List<Item> items = itemRepository.findByOwnerId(ownerId);
-    List<Long> itemIds = items.stream().map(Item::getId).collect(Collectors.toList());
-
-    // Получаем все комментарии для этих items
-    List<Comment> allComments = commentRepository.findByItemIdIn(itemIds);
 
     return items.stream().map(item -> {
       ItemWithBookingsDto dto = ItemMapper.toItemWithBookingsDto(item);
       addBookingInfo(item, dto);
-
-      // Добавляем комментарии для текущего item
-      List<CommentDto> itemComments = allComments.stream()
-              .filter(comment -> comment.getItem().getId().equals(item.getId()))
-              .map(this::toCommentDto)
-              .collect(Collectors.toList());
-      dto.setComments(itemComments);
-
+      addCommentsInfo(item.getId(), dto);
       return dto;
     }).collect(Collectors.toList());
   }
@@ -124,7 +115,7 @@ public class ItemServiceImpl implements ItemService {
   @Override
   public List<ItemDto> searchItems(String text) {
     log.info("Searching items with text: {}", text);
-    if (text.isBlank()) {
+    if (text == null || text.isBlank()) {
       return List.of();
     }
     return itemRepository.search(text).stream()
@@ -141,9 +132,14 @@ public class ItemServiceImpl implements ItemService {
     Item item = itemRepository.findById(itemId)
             .orElseThrow(() -> new NotFoundException("Item with id " + itemId + " not found"));
 
-    // Проверяем, что пользователь действительно брал вещь в аренду
-    List<Booking> pastBookings = bookingRepository.findByBookerIdAndItemIdAndEndBeforeAndStatus(
-            authorId, itemId, LocalDateTime.now(), BookingStatus.APPROVED);
+    // ИСПРАВЛЕНИЕ: Проверяем, что пользователь брал вещь в аренду (любой статус кроме REJECTED)
+    List<Booking> pastBookings = bookingRepository.findByBookerIdAndItemIdAndEndBefore(
+            authorId, itemId, LocalDateTime.now());
+
+    // Фильтруем - оставляем только не отклоненные бронирования
+    pastBookings = pastBookings.stream()
+            .filter(booking -> booking.getStatus() != BookingStatus.REJECTED)
+            .collect(Collectors.toList());
 
     if (pastBookings.isEmpty()) {
       throw new ValidationException("User can only comment on items they have booked and used in the past");
@@ -164,6 +160,7 @@ public class ItemServiceImpl implements ItemService {
   private void addBookingInfo(Item item, ItemWithBookingsDto dto) {
     LocalDateTime now = LocalDateTime.now();
 
+    // Последнее бронирование
     List<Booking> lastBookings = bookingRepository.findLastBookingForItem(item.getId(), now);
     if (!lastBookings.isEmpty()) {
       Booking lastBooking = lastBookings.get(0);
@@ -175,6 +172,7 @@ public class ItemServiceImpl implements ItemService {
       ));
     }
 
+    // Следующее бронирование
     List<Booking> nextBookings = bookingRepository.findNextBookingForItem(item.getId(), now);
     if (!nextBookings.isEmpty()) {
       Booking nextBooking = nextBookings.get(0);

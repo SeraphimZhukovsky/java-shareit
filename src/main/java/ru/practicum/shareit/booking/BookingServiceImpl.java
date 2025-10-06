@@ -3,11 +3,11 @@ package ru.practicum.shareit.booking;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.shareit.booking.dto.BookingDto;
-import ru.practicum.shareit.booking.dto.BookingResponseDto;
+import ru.practicum.shareit.booking.dto.BookingRequestDto;
 import ru.practicum.shareit.error.AccessDeniedException;
 import ru.practicum.shareit.error.NotFoundException;
 import ru.practicum.shareit.error.ValidationException;
@@ -31,29 +31,36 @@ public class BookingServiceImpl implements BookingService {
 
   @Override
   @Transactional
-  public BookingResponseDto createBooking(BookingDto bookingDto, Long bookerId) {
+  public BookingDto createBooking(BookingRequestDto bookingRequestDto, Long bookerId) {
     User booker = userRepository.findById(bookerId)
             .orElseThrow(() -> new NotFoundException("User with id " + bookerId + " not found"));
 
-    Item item = itemRepository.findById(bookingDto.getItemId())
-            .orElseThrow(() -> new NotFoundException("Item with id " + bookingDto.getItemId() + " not found"));
+    Item item = itemRepository.findById(bookingRequestDto.getItemId())
+            .orElseThrow(() -> new NotFoundException("Item with id " + bookingRequestDto.getItemId() + " not found"));
 
+    // Проверка доступности вещи
     if (!item.getAvailable()) {
       throw new ValidationException("Item is not available for booking");
     }
 
-    if (item.getOwnerId().equals(bookerId)) {
+    // Проверка, что владелец не бронирует свою вещь
+    if (item.getOwner().getId().equals(bookerId)) {
       throw new NotFoundException("Owner cannot book his own item");
     }
 
-    if (bookingDto.getStart().isAfter(bookingDto.getEnd()) ||
-            bookingDto.getStart().isEqual(bookingDto.getEnd())) {
+    // Валидация дат
+    if (bookingRequestDto.getStart().isAfter(bookingRequestDto.getEnd()) ||
+            bookingRequestDto.getStart().isEqual(bookingRequestDto.getEnd())) {
       throw new ValidationException("Invalid booking dates");
     }
 
+    if (bookingRequestDto.getStart().isBefore(LocalDateTime.now())) {
+      throw new ValidationException("Start date cannot be in the past");
+    }
+
     Booking booking = new Booking();
-    booking.setStart(bookingDto.getStart());
-    booking.setEnd(bookingDto.getEnd());
+    booking.setStart(bookingRequestDto.getStart());
+    booking.setEnd(bookingRequestDto.getEnd());
     booking.setItem(item);
     booking.setBooker(booker);
     booking.setStatus(BookingStatus.WAITING);
@@ -61,19 +68,21 @@ public class BookingServiceImpl implements BookingService {
     Booking savedBooking = bookingRepository.save(booking);
     log.info("Booking created with ID: {}", savedBooking.getId());
 
-    return toBookingResponseDto(savedBooking);
+    return toBookingDto(savedBooking);
   }
 
   @Override
   @Transactional
-  public BookingResponseDto updateBookingStatus(Long bookingId, Boolean approved, Long ownerId) {
+  public BookingDto approveBooking(Long bookingId, Boolean approved, Long ownerId) {
     Booking booking = bookingRepository.findById(bookingId)
             .orElseThrow(() -> new NotFoundException("Booking with id " + bookingId + " not found"));
 
-    if (!booking.getItem().getOwnerId().equals(ownerId)) {
+    // Проверка, что пользователь - владелец вещи
+    if (!booking.getItem().getOwner().getId().equals(ownerId)) {
       throw new AccessDeniedException("Only item owner can update booking status");
     }
 
+    // Проверка, что бронирование еще ожидает подтверждения
     if (booking.getStatus() != BookingStatus.WAITING) {
       throw new ValidationException("Booking status cannot be changed");
     }
@@ -82,103 +91,105 @@ public class BookingServiceImpl implements BookingService {
     Booking updatedBooking = bookingRepository.save(booking);
     log.info("Booking ID: {} status updated to: {}", bookingId, updatedBooking.getStatus());
 
-    return toBookingResponseDto(updatedBooking);
+    return toBookingDto(updatedBooking);
   }
 
   @Override
-  public BookingResponseDto getBookingById(Long bookingId, Long userId) {
+  public BookingDto getBookingById(Long bookingId, Long userId) {
     Booking booking = bookingRepository.findById(bookingId)
             .orElseThrow(() -> new NotFoundException("Booking with id " + bookingId + " not found"));
 
-    if (!booking.getBooker().getId().equals(userId) && !booking.getItem().getOwnerId().equals(userId)) {
+    // Проверка прав доступа
+    if (!booking.getBooker().getId().equals(userId) &&
+            !booking.getItem().getOwner().getId().equals(userId)) {
       throw new AccessDeniedException("Access to booking denied");
     }
 
-    return toBookingResponseDto(booking);
+    return toBookingDto(booking);
   }
 
   @Override
-  public List<BookingResponseDto> getUserBookings(Long bookerId, BookingState state, int from, int size) {
-    User booker = userRepository.findById(bookerId)
+  public List<BookingDto> getUserBookings(Long bookerId, BookingState state, int from, int size) {
+    userRepository.findById(bookerId)
             .orElseThrow(() -> new NotFoundException("User with id " + bookerId + " not found"));
 
-    PageRequest pageRequest = PageRequest.of(from / size, size, Sort.by(Sort.Direction.DESC, "start"));
+    Pageable pageable = PageRequest.of(from / size, size);
     List<Booking> bookings;
 
     switch (state) {
       case CURRENT:
-        bookings = bookingRepository.findByBookerAndStartBeforeAndEndAfter(
-                booker, LocalDateTime.now(), LocalDateTime.now(), pageRequest.getSort());
+        bookings = bookingRepository.findByBookerIdAndStartBeforeAndEndAfterOrderByStartDesc(
+                bookerId, LocalDateTime.now(), LocalDateTime.now(), pageable);
         break;
       case PAST:
-        bookings = bookingRepository.findByBookerAndEndBefore(
-                booker, LocalDateTime.now(), pageRequest.getSort());
+        bookings = bookingRepository.findByBookerIdAndEndBeforeOrderByStartDesc(
+                bookerId, LocalDateTime.now(), pageable);
         break;
       case FUTURE:
-        bookings = bookingRepository.findByBookerAndStartAfter(
-                booker, LocalDateTime.now(), pageRequest.getSort());
+        bookings = bookingRepository.findByBookerIdAndStartAfterOrderByStartDesc(
+                bookerId, LocalDateTime.now(), pageable);
         break;
       case WAITING:
       case REJECTED:
         BookingStatus status = BookingStatus.valueOf(state.name());
-        bookings = bookingRepository.findByBookerAndStatus(booker, status, pageRequest.getSort());
+        bookings = bookingRepository.findByBookerIdAndStatusOrderByStartDesc(bookerId, status, pageable);
         break;
       default: // ALL
-        bookings = bookingRepository.findByBooker(booker, pageRequest.getSort());
+        bookings = bookingRepository.findByBookerIdOrderByStartDesc(bookerId, pageable);
     }
 
     return bookings.stream()
-            .map(this::toBookingResponseDto)
+            .map(this::toBookingDto)
             .collect(Collectors.toList());
   }
 
   @Override
-  public List<BookingResponseDto> getOwnerBookings(Long ownerId, BookingState state, int from, int size) {
+  public List<BookingDto> getOwnerBookings(Long ownerId, BookingState state, int from, int size) {
     userRepository.findById(ownerId)
             .orElseThrow(() -> new NotFoundException("User with id " + ownerId + " not found"));
 
-    PageRequest pageRequest = PageRequest.of(from / size, size, Sort.by(Sort.Direction.DESC, "start"));
+    Pageable pageable = PageRequest.of(from / size, size);
     List<Booking> bookings;
 
     switch (state) {
       case CURRENT:
-        bookings = bookingRepository.findByItem_OwnerIdAndStartBeforeAndEndAfter(
-                ownerId, LocalDateTime.now(), LocalDateTime.now(), pageRequest.getSort());
+        bookings = bookingRepository.findByItemOwnerIdAndStartBeforeAndEndAfterOrderByStartDesc(
+                ownerId, LocalDateTime.now(), LocalDateTime.now(), pageable);
         break;
       case PAST:
-        bookings = bookingRepository.findByItem_OwnerIdAndEndBefore(
-                ownerId, LocalDateTime.now(), pageRequest.getSort());
+        bookings = bookingRepository.findByItemOwnerIdAndEndBeforeOrderByStartDesc(
+                ownerId, LocalDateTime.now(), pageable);
         break;
       case FUTURE:
-        bookings = bookingRepository.findByItem_OwnerIdAndStartAfter(
-                ownerId, LocalDateTime.now(), pageRequest.getSort());
+        bookings = bookingRepository.findByItemOwnerIdAndStartAfterOrderByStartDesc(
+                ownerId, LocalDateTime.now(), pageable);
         break;
       case WAITING:
       case REJECTED:
         BookingStatus status = BookingStatus.valueOf(state.name());
-        bookings = bookingRepository.findByItem_OwnerIdAndStatus(ownerId, status, pageRequest.getSort());
+        bookings = bookingRepository.findByItemOwnerIdAndStatusOrderByStartDesc(ownerId, status, pageable);
         break;
       default: // ALL
-        bookings = bookingRepository.findByItem_OwnerId(ownerId, pageRequest.getSort());
+        bookings = bookingRepository.findByItemOwnerIdOrderByStartDesc(ownerId, pageable);
     }
 
     return bookings.stream()
-            .map(this::toBookingResponseDto)
+            .map(this::toBookingDto)
             .collect(Collectors.toList());
   }
 
-  private BookingResponseDto toBookingResponseDto(Booking booking) {
-    BookingResponseDto.Booker booker = new BookingResponseDto.Booker(
+  private BookingDto toBookingDto(Booking booking) {
+    BookingDto.Booker booker = new BookingDto.Booker(
             booking.getBooker().getId(),
             booking.getBooker().getName()
     );
 
-    BookingResponseDto.Item item = new BookingResponseDto.Item(
+    BookingDto.Item item = new BookingDto.Item(
             booking.getItem().getId(),
             booking.getItem().getName()
     );
 
-    return new BookingResponseDto(
+    return new BookingDto(
             booking.getId(),
             booking.getStart(),
             booking.getEnd(),

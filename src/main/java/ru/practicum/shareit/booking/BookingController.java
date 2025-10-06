@@ -5,7 +5,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 import ru.practicum.shareit.booking.dto.BookingDto;
-import ru.practicum.shareit.booking.dto.BookingResponseDto;
+import ru.practicum.shareit.booking.dto.BookingRequestDto;
 
 import java.util.List;
 
@@ -15,35 +15,36 @@ import java.util.List;
 @RequiredArgsConstructor
 public class BookingController {
   private final BookingService bookingService;
+  private static final String USER_ID_HEADER = "X-Sharer-User-Id";
 
   @PostMapping
-  public BookingResponseDto createBooking(
-          @Valid @RequestBody BookingDto bookingDto,
-          @RequestHeader("X-Sharer-User-Id") Long bookerId) {
+  public BookingDto createBooking(
+          @Valid @RequestBody BookingRequestDto bookingRequestDto,
+          @RequestHeader(USER_ID_HEADER) Long bookerId) {
     log.info("Creating booking for user ID: {}", bookerId);
-    return bookingService.createBooking(bookingDto, bookerId);
+    return bookingService.createBooking(bookingRequestDto, bookerId);
   }
 
   @PatchMapping("/{bookingId}")
-  public BookingResponseDto updateBookingStatus(
+  public BookingDto approveBooking(
           @PathVariable Long bookingId,
           @RequestParam Boolean approved,
-          @RequestHeader("X-Sharer-User-Id") Long ownerId) {
+          @RequestHeader(USER_ID_HEADER) Long ownerId) {
     log.info("Updating booking ID: {} status to {} by user ID: {}", bookingId, approved, ownerId);
-    return bookingService.updateBookingStatus(bookingId, approved, ownerId);
+    return bookingService.approveBooking(bookingId, approved, ownerId);
   }
 
   @GetMapping("/{bookingId}")
-  public BookingResponseDto getBookingById(
+  public BookingDto getBookingById(
           @PathVariable Long bookingId,
-          @RequestHeader("X-Sharer-User-Id") Long userId) {
+          @RequestHeader(USER_ID_HEADER) Long userId) {
     log.info("Getting booking ID: {} for user ID: {}", bookingId, userId);
     return bookingService.getBookingById(bookingId, userId);
   }
 
   @GetMapping
-  public List<BookingResponseDto> getUserBookings(
-          @RequestHeader("X-Sharer-User-Id") Long bookerId,
+  public List<BookingDto> getUserBookings(
+          @RequestHeader(USER_ID_HEADER) Long bookerId,
           @RequestParam(defaultValue = "ALL") BookingState state,
           @RequestParam(defaultValue = "0") int from,
           @RequestParam(defaultValue = "10") int size) {
@@ -52,8 +53,8 @@ public class BookingController {
   }
 
   @GetMapping("/owner")
-  public List<BookingResponseDto> getOwnerBookings(
-          @RequestHeader("X-Sharer-User-Id") Long ownerId,
+  public List<BookingDto> getOwnerBookings(
+          @RequestHeader(USER_ID_HEADER) Long ownerId,
           @RequestParam(defaultValue = "ALL") BookingState state,
           @RequestParam(defaultValue = "0") int from,
           @RequestParam(defaultValue = "10") int size) {
