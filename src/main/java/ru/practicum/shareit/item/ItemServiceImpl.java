@@ -11,6 +11,7 @@ import ru.practicum.shareit.error.AccessDeniedException;
 import ru.practicum.shareit.error.NotFoundException;
 import ru.practicum.shareit.error.ValidationException;
 import ru.practicum.shareit.item.dto.CommentDto;
+import ru.practicum.shareit.item.dto.CommentRequestDto;
 import ru.practicum.shareit.item.dto.ItemDto;
 import ru.practicum.shareit.item.dto.ItemWithBookingsDto;
 import ru.practicum.shareit.item.model.Comment;
@@ -185,7 +186,7 @@ public class ItemServiceImpl implements ItemService {
 
   @Override
   @Transactional
-  public CommentDto addComment(Long itemId, CommentDto commentDto, Long authorId) {
+  public CommentDto addComment(Long itemId, CommentRequestDto commentRequestDto, Long authorId) {
     User author = getUserById(authorId);
 
     Item item = getItemById(itemId);
@@ -204,7 +205,7 @@ public class ItemServiceImpl implements ItemService {
     }
 
     Comment comment = new Comment();
-    comment.setText(commentDto.getText());
+    comment.setText(commentRequestDto.getText());
     comment.setItem(item);
     comment.setAuthor(author);
     comment.setCreated(LocalDateTime.now());

@@ -6,6 +6,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.ValidationException;
 import org.springframework.web.bind.annotation.*;
 import ru.practicum.shareit.item.dto.CommentDto;
+import ru.practicum.shareit.item.dto.CommentRequestDto;
 import ru.practicum.shareit.item.dto.ItemDto;
 import ru.practicum.shareit.item.dto.ItemWithBookingsDto;
 
@@ -52,8 +53,8 @@ public class ItemController {
 
   @PostMapping("/{itemId}/comment")
   public CommentDto addComment(@PathVariable Long itemId,
-                               @Valid @RequestBody CommentDto commentDto,
+                               @Valid @RequestBody CommentRequestDto commentRequestDto,
                                @RequestHeader("X-Sharer-User-Id") Long authorId) {
-    return itemService.addComment(itemId, commentDto, authorId);
+    return itemService.addComment(itemId, commentRequestDto, authorId);
   }
 }
