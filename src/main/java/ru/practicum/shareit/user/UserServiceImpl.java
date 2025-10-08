@@ -1,6 +1,6 @@
 package ru.practicum.shareit.user;
 
-import jakarta.validation.ValidationException;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import ru.practicum.shareit.error.ConflictException;
@@ -12,20 +12,26 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
   private final UserRepository userRepository;
 
-  public UserServiceImpl(UserRepository userRepository) {
-    this.userRepository = userRepository;
-  }
-
   @Override
   public UserDto createUser(UserDto userDto) {
+    log.info("Creating user: name={}, email={}", userDto.getName(), userDto.getEmail());
+
     if (userRepository.existsByEmail(userDto.getEmail())) {
+      log.warn("Email already exists: {}", userDto.getEmail());
       throw new ConflictException("Email already exists");
     }
+
+    log.info("Mapping user DTO to entity");
     User user = UserMapper.toUser(userDto);
+
+    log.info("Saving user to database");
     User savedUser = userRepository.save(user);
+
+    log.info("User created with ID: {}", savedUser.getId());
     return UserMapper.toUserDto(savedUser);
   }
 
@@ -39,15 +45,16 @@ public class UserServiceImpl implements UserService {
     }
 
     if (userDto.getEmail() != null && !userDto.getEmail().isBlank()) {
-      checkEmailUniqueness(userDto.getEmail(), userId);
-
-      if (!isValidEmail(userDto.getEmail())) {
-        throw new ValidationException("Email should be valid");
-      }
+      userRepository.findByEmail(userDto.getEmail())
+              .ifPresent(user -> {
+                if (!user.getId().equals(userId)) {
+                  throw new ConflictException("Email already exists");
+                }
+              });
       existingUser.setEmail(userDto.getEmail());
     }
 
-    User updatedUser = userRepository.update(existingUser);
+    User updatedUser = userRepository.save(existingUser);
     log.info("User ID: {} updated successfully", userId);
     return UserMapper.toUserDto(updatedUser);
   }
