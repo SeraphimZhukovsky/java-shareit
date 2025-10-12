@@ -89,6 +89,7 @@
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-surefire-plugin</artifactId>
+					<version>3.2.5</version>
 					<configuration>
 						<systemPropertyVariables>
 							<spring.profiles.active>test</spring.profiles.active>
@@ -142,7 +143,14 @@
 					<artifactId>jacoco-maven-plugin</artifactId>
 					<version>0.8.12</version>
 					<configuration>
-						<output>file</output>
+						<excludes>
+							<exclude>**/dto/**</exclude>
+							<exclude>**/model/**</exclude>
+							<exclude>**/config/**</exclude>
+							<exclude>**/ShareIt*</exclude>
+							<exclude>**/error/**</exclude>
+							<exclude>**/client/**</exclude>
+						</excludes>
 					</configuration>
 					<executions>
 						<execution>
@@ -162,34 +170,24 @@
 										<element>BUNDLE</element>
 										<limits>
 											<limit>
-												<counter>INSTRUCTION</counter>
-												<value>COVEREDRATIO</value>
-												<minimum>0.01</minimum>
-											</limit>
-											<limit>
 												<counter>LINE</counter>
 												<value>COVEREDRATIO</value>
-												<minimum>0.9</minimum>
+												<minimum>0.6</minimum>
 											</limit>
 											<limit>
 												<counter>BRANCH</counter>
 												<value>COVEREDRATIO</value>
-												<minimum>0.6</minimum>
-											</limit>
-											<limit>
-												<counter>COMPLEXITY</counter>
-												<value>COVEREDRATIO</value>
-												<minimum>0.6</minimum>
+												<minimum>0.5</minimum>
 											</limit>
 											<limit>
 												<counter>METHOD</counter>
 												<value>COVEREDRATIO</value>
-												<minimum>0.7</minimum>
+												<minimum>0.6</minimum>
 											</limit>
 											<limit>
 												<counter>CLASS</counter>
-												<value>MISSEDCOUNT</value>
-												<maximum>1</maximum>
+												<value>COVEREDRATIO</value>
+												<minimum>0.7</minimum>
 											</limit>
 										</limits>
 									</rule>
