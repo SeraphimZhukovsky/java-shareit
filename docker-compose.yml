@@ -18,5 +18,28 @@ services:
       timeout: 5s
       retries: 5
 
+  shareit-server:
+    build: ./server
+    container_name: shareit-server
+    ports:
+      - "9090:9090"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/shareit
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: password
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  shareit-gateway:
+    build: ./gateway
+    container_name: shareit-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      SHAREIT_SERVER_URL: http://shareit-server:9090
+    depends_on:
+      - shareit-server
+
 volumes:
   postgres_data:
