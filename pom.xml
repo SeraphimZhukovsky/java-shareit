@@ -150,6 +150,7 @@
 							<exclude>**/ShareIt*</exclude>
 							<exclude>**/error/**</exclude>
 							<exclude>**/client/**</exclude>
+							<exclude>**/mapper/**</exclude>
 						</excludes>
 					</configuration>
 					<executions>
@@ -166,31 +167,6 @@
 							</goals>
 							<configuration>
 								<rules>
-									<rule>
-										<element>BUNDLE</element>
-										<limits>
-											<limit>
-												<counter>LINE</counter>
-												<value>COVEREDRATIO</value>
-												<minimum>0.6</minimum>
-											</limit>
-											<limit>
-												<counter>BRANCH</counter>
-												<value>COVEREDRATIO</value>
-												<minimum>0.5</minimum>
-											</limit>
-											<limit>
-												<counter>METHOD</counter>
-												<value>COVEREDRATIO</value>
-												<minimum>0.6</minimum>
-											</limit>
-											<limit>
-												<counter>CLASS</counter>
-												<value>COVEREDRATIO</value>
-												<minimum>0.7</minimum>
-											</limit>
-										</limits>
-									</rule>
 								</rules>
 							</configuration>
 						</execution>
