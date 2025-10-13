@@ -6,7 +6,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 import ru.practicum.shareit.booking.dto.BookingDto;
 import ru.practicum.shareit.booking.dto.BookingRequestDto;
+import ru.practicum.shareit.booking.model.Booking;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Slf4j
@@ -15,6 +17,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class BookingController {
   private final BookingService bookingService;
+  private final BookingRepository bookingRepository;
   private static final String USER_ID_HEADER = "X-Sharer-User-Id";
 
   @PostMapping
@@ -60,5 +63,15 @@ public class BookingController {
           @RequestParam(defaultValue = "10") int size) {
     log.info("Getting bookings for owner ID: {} with state: {}", ownerId, state);
     return bookingService.getOwnerBookings(ownerId, state, from, size);
+  }
+
+  @GetMapping("/comment-check")
+  public Boolean canUserCommentItem(@RequestHeader("X-Sharer-User-Id") Long userId,
+                                    @RequestParam Long itemId) {
+    List<Booking> pastBookings = bookingRepository.findByBookerIdAndItemIdAndEndBefore(
+            userId, itemId, LocalDateTime.now());
+
+    return pastBookings.stream()
+            .anyMatch(booking -> booking.getStatus() != BookingStatus.REJECTED);
   }
 }

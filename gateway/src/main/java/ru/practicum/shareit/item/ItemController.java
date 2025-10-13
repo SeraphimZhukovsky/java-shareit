@@ -6,6 +6,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import ru.practicum.shareit.booking.BookingClient;
 import ru.practicum.shareit.item.dto.CommentRequestDto;
 import ru.practicum.shareit.item.dto.ItemDto;
 
@@ -19,6 +20,7 @@ import jakarta.validation.constraints.NotNull;
 @Validated
 public class ItemController {
   private final ItemClient itemClient;
+  private final BookingClient bookingClient;
 
   @PostMapping
   public ResponseEntity<Object> createItem(
@@ -65,6 +67,12 @@ public class ItemController {
           @PathVariable Long itemId,
           @Valid @RequestBody CommentRequestDto commentRequestDto,
           @RequestHeader("X-Sharer-User-Id") @NotNull Long authorId) {
+    ResponseEntity<Object> canCommentResponse = bookingClient.canUserCommentItem(authorId, itemId);
+
+    if (!canCommentResponse.getStatusCode().is2xxSuccessful()) {
+      throw new IllegalArgumentException("User can only comment on items they have booked and used in the past");
+    }
+
     log.info("Adding comment for item ID: {} by user ID: {}", itemId, authorId);
     return itemClient.addComment(itemId, commentRequestDto, authorId);
   }

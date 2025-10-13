@@ -18,6 +18,7 @@ import ru.practicum.shareit.user.model.User;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -34,15 +35,13 @@ public class ItemRequestServiceImpl implements ItemRequestService {
   public ItemRequestResponseDto createRequest(ItemRequestDto itemRequestDto, Long requesterId) {
     User requester = getUserById(requesterId);
 
-    ItemRequest itemRequest = new ItemRequest();
-    itemRequest.setDescription(itemRequestDto.getDescription());
-    itemRequest.setRequester(requester);
+    ItemRequest itemRequest = ItemRequestMapper.toItemRequest(itemRequestDto, requester);
     itemRequest.setCreated(LocalDateTime.now());
 
     ItemRequest savedRequest = itemRequestRepository.save(itemRequest);
     log.info("Item request created with ID: {}", savedRequest.getId());
 
-    return toItemRequestResponseDto(savedRequest);
+    return ItemRequestMapper.toItemRequestDto(savedRequest, List.of());
   }
 
   @Override
@@ -51,8 +50,26 @@ public class ItemRequestServiceImpl implements ItemRequestService {
 
     List<ItemRequest> requests = itemRequestRepository.findByRequesterIdOrderByCreatedDesc(requesterId);
 
+    // один запрос для всех items вместо N запросов
+    List<Long> requestIds = requests.stream()
+            .map(ItemRequest::getId)
+            .collect(Collectors.toList());
+
+    // Получаем все items для всех запросов одним запросом
+    List<Item> allItems = itemRepository.findByRequestIdIn(requestIds);
+
+    // Создаем мапу: requestId -> List<ItemDto>
+    Map<Long, List<ItemDto>> itemsByRequestId = allItems.stream()
+            .collect(Collectors.groupingBy(
+                    Item::getRequestId,
+                    Collectors.mapping(this::toItemDto, Collectors.toList())
+            ));
+
     return requests.stream()
-            .map(this::toItemRequestResponseDto)
+            .map(request -> {
+              List<ItemDto> items = itemsByRequestId.getOrDefault(request.getId(), List.of());
+              return ItemRequestMapper.toItemRequestDto(request, items);
+            })
             .collect(Collectors.toList());
   }
 
@@ -63,8 +80,23 @@ public class ItemRequestServiceImpl implements ItemRequestService {
     Pageable pageable = PageRequest.of(from / size, size);
     List<ItemRequest> requests = itemRequestRepository.findByRequesterIdNotOrderByCreatedDesc(userId, pageable);
 
+    List<Long> requestIds = requests.stream()
+            .map(ItemRequest::getId)
+            .collect(Collectors.toList());
+
+    List<Item> allItems = itemRepository.findByRequestIdIn(requestIds);
+
+    Map<Long, List<ItemDto>> itemsByRequestId = allItems.stream()
+            .collect(Collectors.groupingBy(
+                    Item::getRequestId,
+                    Collectors.mapping(this::toItemDto, Collectors.toList())
+            ));
+
     return requests.stream()
-            .map(this::toItemRequestResponseDto)
+            .map(request -> {
+              List<ItemDto> items = itemsByRequestId.getOrDefault(request.getId(), List.of());
+              return ItemRequestMapper.toItemRequestDto(request, items);
+            })
             .collect(Collectors.toList());
   }
 
@@ -75,20 +107,11 @@ public class ItemRequestServiceImpl implements ItemRequestService {
     ItemRequest itemRequest = itemRequestRepository.findById(requestId)
             .orElseThrow(() -> new NotFoundException("Item request with id " + requestId + " not found"));
 
-    return toItemRequestResponseDto(itemRequest);
-  }
-
-  private ItemRequestResponseDto toItemRequestResponseDto(ItemRequest itemRequest) {
     List<ItemDto> items = itemRepository.findByRequestId(itemRequest.getId()).stream()
             .map(this::toItemDto)
             .collect(Collectors.toList());
 
-    return new ItemRequestResponseDto(
-            itemRequest.getId(),
-            itemRequest.getDescription(),
-            itemRequest.getCreated(),
-            items
-    );
+    return ItemRequestMapper.toItemRequestDto(itemRequest, items);
   }
 
   private ItemDto toItemDto(Item item) {

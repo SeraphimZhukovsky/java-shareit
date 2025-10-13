@@ -4,12 +4,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import ru.practicum.shareit.booking.model.Booking;
 import ru.practicum.shareit.booking.BookingRepository;
-import ru.practicum.shareit.booking.BookingStatus;
+import ru.practicum.shareit.booking.model.Booking;
 import ru.practicum.shareit.error.AccessDeniedException;
 import ru.practicum.shareit.error.NotFoundException;
-import ru.practicum.shareit.error.ValidationException;
 import ru.practicum.shareit.item.dto.CommentDto;
 import ru.practicum.shareit.item.dto.CommentRequestDto;
 import ru.practicum.shareit.item.dto.ItemDto;
@@ -18,8 +16,8 @@ import ru.practicum.shareit.item.model.Comment;
 import ru.practicum.shareit.item.model.Item;
 import ru.practicum.shareit.request.ItemRequest;
 import ru.practicum.shareit.request.ItemRequestRepository;
-import ru.practicum.shareit.user.model.User;
 import ru.practicum.shareit.user.UserRepository;
+import ru.practicum.shareit.user.model.User;
 
 import java.time.LocalDateTime;
 import java.util.Comparator;
@@ -150,7 +148,7 @@ public class ItemServiceImpl implements ItemService {
   private void addBookingInfoFromList(Item item, ItemWithBookingsDto dto, List<Booking> itemBookings) {
     LocalDateTime now = LocalDateTime.now();
 
-        Optional<Booking> lastBooking = itemBookings.stream()
+    Optional<Booking> lastBooking = itemBookings.stream()
             .filter(booking -> booking.getStart().isBefore(now))
             .max(Comparator.comparing(Booking::getStart));
 
@@ -201,19 +199,6 @@ public class ItemServiceImpl implements ItemService {
     User author = getUserById(authorId);
 
     Item item = getItemById(itemId);
-
-    // Проверяем, что пользователь брал вещь в аренду (любой статус кроме REJECTED)
-    List<Booking> pastBookings = bookingRepository.findByBookerIdAndItemIdAndEndBefore(
-            authorId, itemId, LocalDateTime.now());
-
-    // Фильтруем - оставляем только не отклоненные бронирования
-    pastBookings = pastBookings.stream()
-            .filter(booking -> booking.getStatus() != BookingStatus.REJECTED)
-            .collect(Collectors.toList());
-
-    if (pastBookings.isEmpty()) {
-      throw new ValidationException("User can only comment on items they have booked and used in the past");
-    }
 
     Comment comment = new Comment();
     comment.setText(commentRequestDto.getText());

@@ -12,10 +12,10 @@ import ru.practicum.shareit.booking.model.Booking;
 import ru.practicum.shareit.error.AccessDeniedException;
 import ru.practicum.shareit.error.NotFoundException;
 import ru.practicum.shareit.error.ValidationException;
-import ru.practicum.shareit.item.model.Item;
 import ru.practicum.shareit.item.ItemRepository;
-import ru.practicum.shareit.user.model.User;
+import ru.practicum.shareit.item.model.Item;
 import ru.practicum.shareit.user.UserRepository;
+import ru.practicum.shareit.user.model.User;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -33,16 +33,6 @@ public class BookingServiceImpl implements BookingService {
   @Override
   @Transactional
   public BookingDto createBooking(BookingRequestDto bookingRequestDto, Long bookerId) {
-    // Валидация дат
-    if (bookingRequestDto.getStart().isAfter(bookingRequestDto.getEnd()) ||
-            bookingRequestDto.getStart().isEqual(bookingRequestDto.getEnd())) {
-      throw new ValidationException("Invalid booking dates");
-    }
-
-    if (bookingRequestDto.getStart().isBefore(LocalDateTime.now())) {
-      throw new ValidationException("Start date cannot be in the past");
-    }
-
     User booker = getUserById(bookerId);
 
     Item item = itemRepository.findById(bookingRequestDto.getItemId())

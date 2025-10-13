@@ -59,4 +59,9 @@ public class BookingClient extends BaseClient {
     );
     return get("/owner?state={state}&from={from}&size={size}", userId, parameters);
   }
+
+  public ResponseEntity<Object> canUserCommentItem(long userId, long itemId) {
+    Map<String, Object> parameters = Map.of("itemId", itemId);
+    return get("/comment-check?itemId={itemId}", userId, parameters);
+  }
 }
