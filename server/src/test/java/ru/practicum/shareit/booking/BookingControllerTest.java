@@ -27,21 +27,22 @@ public class BookingControllerTest {
     @MockBean
     private BookingService bookingService;
 
+    @MockBean
+    private BookingRepository bookingRepository;
+
     @Autowired
     private ObjectMapper objectMapper;
 
+    private final LocalDateTime start = LocalDateTime.now().plusDays(1);
+    private final LocalDateTime end = LocalDateTime.now().plusDays(2);
+
     private final BookingDto.Booker booker = new BookingDto.Booker(2L, "Booker");
     private final BookingDto.Item item = new BookingDto.Item(1L, "Item");
-    private final BookingDto bookingDto = new BookingDto(1L,
-            LocalDateTime.now().plusDays(1),
-            LocalDateTime.now().plusDays(2),
-            BookingStatus.APPROVED, booker, item);
+    private final BookingDto bookingDto = new BookingDto(1L, start, end, BookingStatus.APPROVED, booker, item);
 
     @Test
     void createBookingTest() throws Exception {
-        BookingRequestDto createDto = new BookingRequestDto(1L,
-                LocalDateTime.now().plusDays(1),
-                LocalDateTime.now().plusDays(2));
+        BookingRequestDto createDto = new BookingRequestDto(1L, start, end);
 
         Mockito.when(bookingService.createBooking(any(BookingRequestDto.class), anyLong()))
                 .thenReturn(bookingDto);
