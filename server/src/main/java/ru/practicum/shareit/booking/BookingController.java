@@ -6,9 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 import ru.practicum.shareit.booking.dto.BookingDto;
 import ru.practicum.shareit.booking.dto.BookingRequestDto;
-import ru.practicum.shareit.booking.model.Booking;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 @Slf4j
