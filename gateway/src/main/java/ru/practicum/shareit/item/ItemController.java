@@ -13,6 +13,8 @@ import ru.practicum.shareit.item.dto.ItemDto;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 
+import java.util.List;
+
 @Controller
 @RequestMapping("/items")
 @RequiredArgsConstructor
@@ -58,6 +60,11 @@ public class ItemController {
   public ResponseEntity<Object> searchItems(
           @RequestParam @NotNull String text,
           @RequestHeader("X-Sharer-User-Id") @NotNull Long userId) {
+
+    if (text == null || text.isBlank()) {
+      return ResponseEntity.ok(List.of());
+    }
+
     log.info("Searching items with text: {}", text);
     return itemClient.searchItems(text, userId);
   }
@@ -67,20 +74,6 @@ public class ItemController {
           @PathVariable Long itemId,
           @Valid @RequestBody CommentRequestDto commentRequestDto,
           @RequestHeader("X-Sharer-User-Id") @NotNull Long authorId) {
-
-    // Проверяем, может ли пользователь комментировать эту вещь
-    ResponseEntity<Object> canCommentResponse = bookingClient.canUserCommentItem(authorId, itemId);
-
-    // Если статус не успешный (не 2xx), значит пользователь не может комментировать
-    if (!canCommentResponse.getStatusCode().is2xxSuccessful()) {
-      throw new IllegalArgumentException("User can only comment on items they have booked and used in the past");
-    }
-
-    // Проверяем тело ответа - должно быть true
-    Boolean canComment = (Boolean) canCommentResponse.getBody();
-    if (canComment == null || !canComment) {
-      throw new IllegalArgumentException("User can only comment on items they have booked and used in the past");
-    }
 
     log.info("Adding comment for item ID: {} by user ID: {}", itemId, authorId);
     return itemClient.addComment(itemId, commentRequestDto, authorId);

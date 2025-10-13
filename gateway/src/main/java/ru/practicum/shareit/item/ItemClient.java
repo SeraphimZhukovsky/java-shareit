@@ -51,4 +51,9 @@ public class ItemClient extends BaseClient {
   public ResponseEntity<Object> addComment(Long itemId, CommentRequestDto commentRequestDto, Long authorId) {
     return post("/" + itemId + "/comment", authorId, commentRequestDto);
   }
+
+  public ResponseEntity<Object> canUserCommentItem(long userId, long itemId) {
+    Map<String, Object> parameters = Map.of("itemId", itemId);
+    return get("/comment-check?itemId={itemId}", userId, parameters);
+  }
 }

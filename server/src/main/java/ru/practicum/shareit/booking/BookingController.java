@@ -64,14 +64,4 @@ public class BookingController {
     log.info("Getting bookings for owner ID: {} with state: {}", ownerId, state);
     return bookingService.getOwnerBookings(ownerId, state, from, size);
   }
-
-  @GetMapping("/comment-check")
-  public Boolean canUserCommentItem(@RequestHeader("X-Sharer-User-Id") Long userId,
-                                    @RequestParam Long itemId) {
-    List<Booking> pastBookings = bookingRepository.findByBookerIdAndItemIdAndEndBefore(
-            userId, itemId, LocalDateTime.now());
-
-    return pastBookings.stream()
-            .anyMatch(booking -> booking.getStatus() != BookingStatus.REJECTED);
-  }
 }

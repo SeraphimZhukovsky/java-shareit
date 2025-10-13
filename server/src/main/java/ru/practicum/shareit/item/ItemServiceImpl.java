@@ -1,10 +1,12 @@
 package ru.practicum.shareit.item;
 
+import jakarta.validation.ValidationException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.shareit.booking.BookingRepository;
+import ru.practicum.shareit.booking.BookingStatus;
 import ru.practicum.shareit.booking.model.Booking;
 import ru.practicum.shareit.error.AccessDeniedException;
 import ru.practicum.shareit.error.NotFoundException;
@@ -185,9 +187,6 @@ public class ItemServiceImpl implements ItemService {
   @Override
   public List<ItemDto> searchItems(String text) {
     log.info("Searching items with text: {}", text);
-    if (text == null || text.isBlank()) {
-      return List.of();
-    }
     return itemRepository.search(text).stream()
             .map(ItemMapper::toItemDto)
             .collect(Collectors.toList());
@@ -197,8 +196,18 @@ public class ItemServiceImpl implements ItemService {
   @Transactional
   public CommentDto addComment(Long itemId, CommentRequestDto commentRequestDto, Long authorId) {
     User author = getUserById(authorId);
-
     Item item = getItemById(itemId);
+
+    List<Booking> pastBookings = bookingRepository.findByBookerIdAndItemIdAndEndBefore(
+            authorId, itemId, LocalDateTime.now());
+
+    pastBookings = pastBookings.stream()
+            .filter(booking -> booking.getStatus() != BookingStatus.REJECTED)
+            .collect(Collectors.toList());
+
+    if (pastBookings.isEmpty()) {
+      throw new ValidationException("User can only comment on items they have booked and used in the past");
+    }
 
     Comment comment = new Comment();
     comment.setText(commentRequestDto.getText());
