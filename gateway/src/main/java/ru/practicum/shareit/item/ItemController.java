@@ -67,9 +67,18 @@ public class ItemController {
           @PathVariable Long itemId,
           @Valid @RequestBody CommentRequestDto commentRequestDto,
           @RequestHeader("X-Sharer-User-Id") @NotNull Long authorId) {
+
+    // Проверяем, может ли пользователь комментировать эту вещь
     ResponseEntity<Object> canCommentResponse = bookingClient.canUserCommentItem(authorId, itemId);
 
+    // Если статус не успешный (не 2xx), значит пользователь не может комментировать
     if (!canCommentResponse.getStatusCode().is2xxSuccessful()) {
+      throw new IllegalArgumentException("User can only comment on items they have booked and used in the past");
+    }
+
+    // Проверяем тело ответа - должно быть true
+    Boolean canComment = (Boolean) canCommentResponse.getBody();
+    if (canComment == null || !canComment) {
       throw new IllegalArgumentException("User can only comment on items they have booked and used in the past");
     }
 
