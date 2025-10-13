@@ -73,10 +73,4 @@ public class ErrorHandler {
     log.error("Internal server error", e);
     return new ErrorResponse("Internal server error");
   }
-
-  @ExceptionHandler(IllegalArgumentException.class)
-  @ResponseStatus(HttpStatus.BAD_REQUEST)
-  public ErrorResponse handleIllegalArgumentException(IllegalArgumentException e) {
-    return new ErrorResponse(e.getMessage());
-  }
 }
